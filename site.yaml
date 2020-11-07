@@ -1,0 +1,77 @@
+---
+
+
+- hosts:  webservers
+  become: yes
+  
+  vars:
+    root: /var/www/html
+    index: index.php
+    package_name: nginx
+    package_state: present
+    nginx_file_dest: /etc/nginx/sites-available
+    nginx_file_src: default.j2
+    nginx_restart_state: restarted
+    nginx_state_latest: latest
+
+  tasks:
+    
+    - name: Install Nginx webserver in Three Servers
+      apt:  
+        name: "{{ package_name }}"
+        state: "{{ package_state }}"
+
+    - name: Copy Nginx File 
+      template: 
+        src: "{{ nginx_file_src }}"
+        dest: "{{ nginx_file_dest }}/default"
+    
+
+    - name: Copy Site File 
+      copy: 
+        src:   "./{{index}}"
+        dest: "{{ root }}/{{ index }}"
+
+    - name: Restart Nginx
+      service:
+        name: "{{ package_name }}"
+        state: "{{ nginx_restart_state }}"
+
+    - name: Install PHP and PHP-fpm packages 
+      apt:
+        update_cache: yes
+        name: ['php', 'php-fpm']
+        state: "{{ nginx_state_latest }}"
+
+  
+
+- hosts:  haproxy
+  become: yes
+  
+  vars:
+    pack_name: haproxy
+    haproxy_state: present
+    haproxy_restart_state: latest
+    haproxy_mode: http
+    haproxy_algorithm:  roundrobin
+    haproxy_backend_servers: backend_servers
+    haproxy_path: /etc/haproxy
+    haproxy_state: latest
+
+        
+  tasks:
+    - name: Install HAProxy in devhaproxy
+      apt: 
+        name: "{{ pack_name }}"
+        state: "{{ haproxy_state }}"
+    
+    - name: Copy HAProxy File 
+      template:
+        src:  haproxy.cfg.j2
+        dest: "{{ haproxy_path }}/haproxy.cfg"
+        
+    - name: Start HAProxy
+      service:  
+        name: haproxy
+        state:  restarted
+    
